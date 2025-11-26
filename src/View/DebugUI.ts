@@ -13,7 +13,7 @@ export class DebugUI extends Pane {
   public lightFolder: FolderApi
 
   constructor() {
-    super()
+    super({ title: 'Debug Menu', expanded: false })
     this.playerFolder = this.addFolder({ title: 'Player' })
     this.viewmodelFolder = this.addFolder({ title: 'Viewmodel' })
     this.lightFolder = this.addFolder({ title: 'Light' })
