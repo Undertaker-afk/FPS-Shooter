@@ -22,6 +22,7 @@
     "three-csm": "^4.2.1",
     "three-lens-distortion": "github:ycw/three-lens-distortion",
     "three-nebula": "^10.0.1",
+    "trystero": "^0.22.0",
     "tweakpane": "^3.0.2"
   }
 }
