@@ -25,12 +25,6 @@ export class SkyLight extends THREE.Object3D implements IUpdatable {
     this.hemiLight.groundColor.setHSL(0.095, 0.2, 0.75)
     this.renderer.addToRenderer(this.hemiLight)
 
-    const lightInput = this.renderer.debugUI.addInput(this.hemiLight, 'intensity', {
-      min: 0,
-      max: 10,
-    })
-    this.renderer.debugUI.lightFolder.add(lightInput)
-
     this.directionalLight = new THREE.DirectionalLight(0xfeaaee, 6.2)
     this.directionalLight.shadow.camera.near = 0.1
     this.directionalLight.shadow.camera.far = 500
@@ -44,11 +38,6 @@ export class SkyLight extends THREE.Object3D implements IUpdatable {
     this.directionalLight.shadow.bias = -0.001
     this.directionalLight.castShadow = true
     this.directionalLight.shadow.autoUpdate = false
-    const dirLight = this.renderer.debugUI.addInput(this.directionalLight, 'intensity', {
-      min: 0,
-      max: 10,
-    })
-    this.renderer.debugUI.lightFolder.add(dirLight)
 
     this.renderer.addToRenderer(this.directionalLight)
     this.renderer.addToRenderer(this.directionalLight.target)
@@ -104,49 +93,6 @@ export class SkyLight extends THREE.Object3D implements IUpdatable {
       //this.render(this.scene, this.camera);
     }
 
-    const folder = this.renderer.debugUI.addFolder({ title: 'Sky shader' })
-    folder
-      .addInput(effectController, 'turbidity', {
-        min: 0,
-        max: 20,
-      })
-      .on('change', guiChanged)
-    folder
-      .addInput(effectController, 'rayleigh', {
-        min: 0,
-        max: 4,
-      })
-      .on('change', guiChanged)
-    folder
-      .addInput(effectController, 'mieCoefficient', {
-        min: 0,
-        max: 0.1,
-      })
-      .on('change', guiChanged)
-    folder
-      .addInput(effectController, 'mieDirectionalG', {
-        min: 0,
-        max: 1,
-      })
-      .on('change', guiChanged)
-    folder
-      .addInput(effectController, 'elevation', {
-        min: 0,
-        max: 90,
-      })
-      .on('change', guiChanged)
-    folder
-      .addInput(effectController, 'azimuth', {
-        min: -180,
-        max: 180,
-      })
-      .on('change', guiChanged)
-    folder
-      .addInput(effectController, 'exposure', {
-        min: 0,
-        max: 1,
-      })
-      .on('change', guiChanged)
     guiChanged()
   }
   private lightUpdater: PeriodicUpdater

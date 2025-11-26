@@ -144,15 +144,6 @@ export class InputManager implements IUpdatable {
       const playerWrapper2 = PlayerWrapper.default()
       game.setCurrentPlayer(playerWrapper2)
       game.addPlayer(playerWrapper2)
-
-      game.renderer.debugUI
-        .addButton({
-          title: 'Player',
-          label: 'Player',
-        })
-        .on('click', () => {
-          game.setCurrentPlayer(playerWrapper2)
-        })
     }
 
     if (this.keys.get(Key.Left_Click)?.isPressed) {

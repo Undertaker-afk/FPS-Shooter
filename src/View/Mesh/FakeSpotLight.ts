@@ -1,7 +1,6 @@
 import { IUpdatable } from "../../Interface/IUpdatable";
 import * as THREE from "three";
 import { Vector3D } from "../../Core/Vector";
-import { DebugUI } from "../DebugUI";
 
 export interface FakeSpotLightParameter {
   radius?: number;
@@ -122,45 +121,5 @@ export class FakeSpotLight extends THREE.Object3D {
 
     this.position.copy(position!);
     this.rotation.copy(rotation!);
-  }
-  public addToDebugUI(debugUI: DebugUI) {
-    const spot = debugUI.addFolder({ title: "Fake SpotLight" });
-    const att = debugUI
-      .addInput(this, "attenuation" as any)
-      .on("change", () => {
-        this.uniforms["attenuation"].value = this.attenuation;
-      });
-    const anglePower = debugUI
-      .addInput(this, "anglePower" as any)
-      .on("change", () => {
-        this.uniforms["anglePower"].value = this.anglePower;
-      });
-    const rad = debugUI.addInput(this, "radius" as any).on("change", () => {
-      (this.children[0] as any).geometry = new THREE.CylinderGeometry(
-        0.1,
-        this.radius,
-        this.height,
-        32 * 2,
-        20,
-        false
-      );
-    });
-
-    const height = debugUI.addInput(this, "height" as any).on("change", () => {
-      (this.children[0] as any).geometry = new THREE.CylinderGeometry(
-        0.1,
-        this.radius,
-        this.height,
-        32 * 2,
-        20,
-        false
-      );
-    });
-    debugUI.addMesh(this);
-    spot.add(rad);
-    spot.add(height);
-
-    spot.add(att);
-    spot.add(anglePower);
   }
 }
