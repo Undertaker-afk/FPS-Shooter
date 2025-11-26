@@ -138,6 +138,4 @@ export abstract class PlayerRenderer implements IUpdatable {
     ;(<THREE.PerspectiveCamera>this.camera).fov = fov
     console.log((<THREE.PerspectiveCamera>this.camera).fov)
   }
-  public showVariables() {
-  }
 }
