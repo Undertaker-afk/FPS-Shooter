@@ -12,6 +12,7 @@ import { CubeRenderer } from './View/Renderer/CubeRenderer'
 import { MapMesh } from './View/Mesh/MapMesh'
 import { SphereRenderer } from './View/Renderer/SphereRenderer'
 import { AudioManager } from './View/Audio/AudioManager'
+import { MultiplayerManager } from './Multiplayer/MultiplayerManager'
 
 export class Game implements IUpdatable {
   public static game: Game
@@ -25,6 +26,9 @@ export class Game implements IUpdatable {
   public actors!: Array<Actor>
   public audioManager: AudioManager
   public mapName = 'collision-world'
+  private multiplayerManager: MultiplayerManager
+  private positionBroadcastTimer: number = 0
+  private positionBroadcastInterval: number = 50 // Broadcast every 50ms
   constructor() {
     this.players = new Array<PlayerWrapper>()
     this.globalLoadingManager = GlobalLoadingManager.getInstance()
@@ -32,6 +36,7 @@ export class Game implements IUpdatable {
     this.inputManager = new InputManager()
     this.update = this.update.bind(this)
     this.audioManager = new AudioManager()
+    this.multiplayerManager = MultiplayerManager.getInstance()
   }
   public onLoad(): void {
     this.renderer = new Renderer(this.players)
@@ -114,6 +119,14 @@ export class Game implements IUpdatable {
     this.currentPlayer.player.update(dt) // Physics
     this.physics.update(dt)
     this.renderer.update(dt)
+    
+    // Broadcast position to other players
+    this.positionBroadcastTimer += dt * 1000
+    if (this.positionBroadcastTimer >= this.positionBroadcastInterval) {
+      this.multiplayerManager.broadcastPosition(this.currentPlayer.player)
+      this.positionBroadcastTimer = 0
+    }
+    
     this.lastUpdateTS = now
     requestAnimationFrame(this.update)
   }
