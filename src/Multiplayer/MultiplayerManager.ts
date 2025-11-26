@@ -21,6 +21,42 @@ export interface LobbyState {
   hostId: string
 }
 
+export interface ShootEvent {
+  position: { x: number; y: number; z: number }
+  direction: { x: number; y: number; z: number }
+}
+
+// Type guards for runtime validation
+function isPlayerState(data: unknown): data is PlayerState {
+  if (!data || typeof data !== 'object') return false
+  const obj = data as Record<string, unknown>
+  return typeof obj.id === 'string' &&
+    typeof obj.position === 'object' && obj.position !== null &&
+    typeof obj.velocity === 'object' && obj.velocity !== null &&
+    typeof obj.lookingDirection === 'object' && obj.lookingDirection !== null
+}
+
+function isLobbyState(data: unknown): data is LobbyState {
+  if (!data || typeof data !== 'object') return false
+  const obj = data as Record<string, unknown>
+  return Array.isArray(obj.players) &&
+    typeof obj.gameStarted === 'boolean' &&
+    typeof obj.hostId === 'string'
+}
+
+function isShootEvent(data: unknown): data is ShootEvent {
+  if (!data || typeof data !== 'object') return false
+  const obj = data as Record<string, unknown>
+  return typeof obj.position === 'object' && obj.position !== null &&
+    typeof obj.direction === 'object' && obj.direction !== null
+}
+
+function isGameStartEvent(data: unknown): data is { start: boolean } {
+  if (!data || typeof data !== 'object') return false
+  const obj = data as Record<string, unknown>
+  return typeof obj.start === 'boolean'
+}
+
 const NOSTR_RELAY = 'wss://nos.lol'
 const APP_ID = 'enari-fps-shooter-v1'
 const MAX_PLAYERS = 4
@@ -51,7 +87,7 @@ export class MultiplayerManager {
   }
 
   private generatePlayerId(): string {
-    return 'player_' + Math.random().toString(36).substr(2, 9)
+    return 'player_' + Math.random().toString(36).substring(2, 11)
   }
 
   public getLocalPlayerId(): string {
@@ -108,25 +144,30 @@ export class MultiplayerManager {
 
     // Handle position updates
     getPosition((data, peerId) => {
-      this.handlePositionUpdate(data as unknown as PlayerState, peerId)
+      if (isPlayerState(data)) {
+        this.handlePositionUpdate(data, peerId)
+      }
     })
 
     // Handle lobby state updates
     getLobbyState((data, peerId) => {
-      this.handleLobbyStateUpdate(data as unknown as LobbyState, peerId)
+      if (isLobbyState(data)) {
+        this.handleLobbyStateUpdate(data, peerId)
+      }
     })
 
     // Handle game start
     getGameStart((data) => {
-      const gameData = data as { start?: boolean }
-      if (gameData && gameData.start) {
+      if (isGameStartEvent(data) && data.start) {
         this.handleGameStart()
       }
     })
 
     // Handle shoot events
     getShoot((data, peerId) => {
-      this.handleRemoteShoot(data as { position: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } }, peerId)
+      if (isShootEvent(data)) {
+        this.handleRemoteShoot(data, peerId)
+      }
     })
 
     // Initialize lobby state
@@ -217,7 +258,7 @@ export class MultiplayerManager {
     }
   }
 
-  private handleRemoteShoot(data: { position: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } }, peerId: string): void {
+  private handleRemoteShoot(data: ShootEvent, peerId: string): void {
     // Visual effect for remote player shooting
     const remotePlayer = this.remotePlayers.get(peerId)
     if (remotePlayer && remotePlayer.renderer) {

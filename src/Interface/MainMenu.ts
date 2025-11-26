@@ -287,10 +287,11 @@ export class MainMenu {
     document.body.appendChild(this.lobbyContainer)
     
     // Initial UI update
+    const localPlayerId = this.multiplayerManager.getLocalPlayerId()
     this.updateLobbyUI({
-      players: [this.multiplayerManager.getLocalPlayerId()],
+      players: [localPlayerId],
       gameStarted: false,
-      hostId: this.multiplayerManager.getLocalPlayerId()
+      hostId: localPlayerId
     })
   }
 
