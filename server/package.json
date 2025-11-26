@@ -1,0 +1,16 @@
+{
+  "name": "enari-fps-matchmaking-server",
+  "version": "1.0.0",
+  "description": "Cloudflare Workers matchmaking server for ENARI FPS",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "^5.2.2",
+    "wrangler": "^3.91.0"
+  }
+}
