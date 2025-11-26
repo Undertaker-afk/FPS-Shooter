@@ -8,6 +8,8 @@ import { PlayerRenderer } from '../View/Renderer/PlayerRenderer/PlayerRenderer'
 import { TPSCameraManager } from '../View/CameraManager/TPSCameraManager'
 import { FPSCameraManager } from '../View/CameraManager/FPSCameraManager'
 import { FPSMesh } from '../View/Mesh/FPSMesh'
+import { MobileControls } from './MobileControls'
+import { EscMenu } from './EscMenu'
 
 export class InputManager implements IUpdatable {
   public keys: Map<Key, KeyBinding> = new Map<Key, KeyBinding>()
@@ -24,6 +26,8 @@ export class InputManager implements IUpdatable {
 
   private lastLeftClick: Date = new Date()
   private playerWrapper!: PlayerWrapper
+  private mobileControls: MobileControls
+  private escMenu: EscMenu
   constructor() {
     for (let k in Key) {
       if (isNaN(Number(k))) {
@@ -50,8 +54,19 @@ export class InputManager implements IUpdatable {
     document.body.ownerDocument.addEventListener('pointerlockchange', this.boundOnPointerlockChange, false)
     document.body.ownerDocument.addEventListener('pointerlockerror', this.boundOnPointerlockError, false)
     document.body.ownerDocument.addEventListener('click', this.boundOnPointerlock, false)
+
+    // Initialize mobile controls
+    this.mobileControls = new MobileControls(this.keys)
+
+    // Initialize ESC menu
+    this.escMenu = new EscMenu()
+    this.escMenu.setResumeCallback(() => {
+      this.onLock()
+    })
   }
   onLock(): void {
+    // Don't request pointer lock if ESC menu is visible
+    if (this.escMenu.getIsVisible()) return
     document.body.requestPointerLock()
   }
   unlock(): void {
@@ -231,5 +246,16 @@ export class InputManager implements IUpdatable {
 
   setCurrentPlayer(playerWrapper: PlayerWrapper): void {
     this.playerWrapper = playerWrapper
+    // Set up mobile controls callback for camera movement
+    this.mobileControls.setMouseMoveCallback((deltaX: number, deltaY: number) => {
+      if (this.playerWrapper && this.playerWrapper.cameraManager) {
+        // Create a synthetic mouse event for the camera manager
+        const syntheticEvent = {
+          movementX: deltaX,
+          movementY: deltaY
+        }
+        this.playerWrapper.cameraManager.onMouseMove(syntheticEvent)
+      }
+    })
   }
 }
