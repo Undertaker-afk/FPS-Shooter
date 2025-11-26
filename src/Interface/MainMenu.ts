@@ -75,11 +75,23 @@ export class MainMenu {
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     `
 
-    // Start Match Search button
-    const searchBtn = this.createMenuButton('START MATCH SEARCH', async () => {
+    // Start Match Search button (Official matchmaking via CF Workers)
+    const searchBtn = this.createMenuButton('OFFICIAL MATCHMAKING', async () => {
       await this.startMatchSearch()
     }, true)
     menuBox.appendChild(searchBtn)
+
+    // Join Room button (Custom room via peer-to-peer)
+    const joinRoomBtn = this.createMenuButton('JOIN ROOM', () => {
+      this.showJoinRoomDialog()
+    })
+    menuBox.appendChild(joinRoomBtn)
+
+    // Create Room button (Custom room via peer-to-peer)
+    const createRoomBtn = this.createMenuButton('CREATE ROOM', () => {
+      this.showCreateRoomDialog()
+    })
+    menuBox.appendChild(createRoomBtn)
 
     // Solo Play button
     const soloBtn = this.createMenuButton('SOLO PLAY', () => {
@@ -165,11 +177,11 @@ export class MainMenu {
     // Show lobby UI
     this.showLobbyScreen()
 
-    // Connect to matchmaking
+    // Connect to official matchmaking (will use CF Workers in the future)
     await this.multiplayerManager.joinMatchmaking()
   }
 
-  private showLobbyScreen(): void {
+  private showLobbyScreen(customRoomId?: string): void {
     // Create lobby container
     this.lobbyContainer = document.createElement('div')
     this.lobbyContainer.id = 'lobby-screen'
@@ -190,7 +202,7 @@ export class MainMenu {
 
     // Lobby title
     const title = document.createElement('h2')
-    title.innerText = 'MATCHMAKING'
+    title.innerText = customRoomId ? `ROOM: ${customRoomId}` : 'MATCHMAKING'
     title.style.cssText = `
       color: #e94560;
       font-size: 36px;
@@ -221,7 +233,7 @@ export class MainMenu {
     searchingDiv.appendChild(spinner)
     
     const searchText = document.createElement('span')
-    searchText.innerText = 'Searching for players...'
+    searchText.innerText = customRoomId ? 'Waiting for players...' : 'Searching for players...'
     searchText.style.cssText = `
       color: rgba(255, 255, 255, 0.8);
       font-size: 18px;
@@ -387,6 +399,233 @@ export class MainMenu {
     if (this.onStartGameCallback) {
       this.onStartGameCallback()
     }
+  }
+
+  private showJoinRoomDialog(): void {
+    const dialog = this.createDialogOverlay()
+    
+    const dialogBox = document.createElement('div')
+    dialogBox.style.cssText = `
+      background: rgba(30, 30, 50, 0.95);
+      border: 2px solid rgba(233, 69, 96, 0.3);
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      min-width: 350px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    `
+
+    const title = document.createElement('h2')
+    title.innerText = 'JOIN ROOM'
+    title.style.cssText = `
+      color: #e94560;
+      font-size: 28px;
+      margin: 0 0 20px 0;
+      letter-spacing: 3px;
+    `
+    dialogBox.appendChild(title)
+
+    const description = document.createElement('p')
+    description.innerText = 'Enter the room ID to join a game with friends'
+    description.style.cssText = `
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      margin: 0 0 20px 0;
+    `
+    dialogBox.appendChild(description)
+
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.placeholder = 'Enter Room ID'
+    input.style.cssText = `
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0 20px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: white;
+      font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+      font-size: 16px;
+      outline: none;
+      box-sizing: border-box;
+    `
+    input.addEventListener('focus', () => {
+      input.style.borderColor = '#e94560'
+    })
+    input.addEventListener('blur', () => {
+      input.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+    })
+    dialogBox.appendChild(input)
+
+    const buttonContainer = document.createElement('div')
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    `
+
+    const joinBtn = this.createMenuButton('JOIN', async () => {
+      const roomId = input.value.trim()
+      if (roomId) {
+        dialog.remove()
+        await this.joinCustomRoom(roomId)
+      }
+    }, true)
+    joinBtn.style.width = 'auto'
+    joinBtn.style.padding = '12px 30px'
+    buttonContainer.appendChild(joinBtn)
+
+    const cancelBtn = this.createMenuButton('CANCEL', () => {
+      dialog.remove()
+    })
+    cancelBtn.style.width = 'auto'
+    cancelBtn.style.padding = '12px 30px'
+    buttonContainer.appendChild(cancelBtn)
+
+    dialogBox.appendChild(buttonContainer)
+    dialog.appendChild(dialogBox)
+    document.body.appendChild(dialog)
+
+    input.focus()
+  }
+
+  private showCreateRoomDialog(): void {
+    const dialog = this.createDialogOverlay()
+    
+    const dialogBox = document.createElement('div')
+    dialogBox.style.cssText = `
+      background: rgba(30, 30, 50, 0.95);
+      border: 2px solid rgba(233, 69, 96, 0.3);
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      min-width: 350px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    `
+
+    const title = document.createElement('h2')
+    title.innerText = 'CREATE ROOM'
+    title.style.cssText = `
+      color: #e94560;
+      font-size: 28px;
+      margin: 0 0 20px 0;
+      letter-spacing: 3px;
+    `
+    dialogBox.appendChild(title)
+
+    const description = document.createElement('p')
+    description.innerText = 'Create a room and share the ID with friends'
+    description.style.cssText = `
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      margin: 0 0 20px 0;
+    `
+    dialogBox.appendChild(description)
+
+    // Generate a random room ID
+    const roomId = this.generateRoomId()
+
+    const roomIdDisplay = document.createElement('div')
+    roomIdDisplay.style.cssText = `
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(233, 69, 96, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0 20px 0;
+    `
+
+    const roomIdLabel = document.createElement('p')
+    roomIdLabel.innerText = 'Room ID:'
+    roomIdLabel.style.cssText = `
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      margin: 0 0 5px 0;
+    `
+    roomIdDisplay.appendChild(roomIdLabel)
+
+    const roomIdText = document.createElement('p')
+    roomIdText.innerText = roomId
+    roomIdText.style.cssText = `
+      color: #e94560;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0;
+      letter-spacing: 2px;
+      user-select: all;
+    `
+    roomIdDisplay.appendChild(roomIdText)
+
+    dialogBox.appendChild(roomIdDisplay)
+
+    const copyBtn = this.createMenuButton('COPY ROOM ID', () => {
+      navigator.clipboard.writeText(roomId)
+      copyBtn.innerText = 'COPIED!'
+      setTimeout(() => {
+        copyBtn.innerText = 'COPY ROOM ID'
+      }, 2000)
+    })
+    copyBtn.style.marginBottom = '10px'
+    dialogBox.appendChild(copyBtn)
+
+    const buttonContainer = document.createElement('div')
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    `
+
+    const createBtn = this.createMenuButton('CREATE & JOIN', async () => {
+      dialog.remove()
+      await this.joinCustomRoom(roomId)
+    }, true)
+    createBtn.style.width = 'auto'
+    createBtn.style.padding = '12px 30px'
+    buttonContainer.appendChild(createBtn)
+
+    const cancelBtn = this.createMenuButton('CANCEL', () => {
+      dialog.remove()
+    })
+    cancelBtn.style.width = 'auto'
+    cancelBtn.style.padding = '12px 30px'
+    buttonContainer.appendChild(cancelBtn)
+
+    dialogBox.appendChild(buttonContainer)
+    dialog.appendChild(dialogBox)
+    document.body.appendChild(dialog)
+  }
+
+  private createDialogOverlay(): HTMLDivElement {
+    const dialog = document.createElement('div')
+    dialog.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3002;
+      font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    `
+    return dialog
+  }
+
+  private generateRoomId(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    let result = ''
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
+  private async joinCustomRoom(roomId: string): Promise<void> {
+    this.isSearching = true
+    this.showLobbyScreen(roomId)
+    await this.multiplayerManager.joinCustomRoom(roomId)
   }
 
   public show(): void {

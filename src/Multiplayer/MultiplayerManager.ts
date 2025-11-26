@@ -111,19 +111,68 @@ export class MultiplayerManager {
   }
 
   public async joinMatchmaking(): Promise<void> {
-    console.log('Joining matchmaking...')
+    console.log('Joining official matchmaking...')
+    // Official matchmaking connects to CF Workers server for ping-based matching
+    // The server will return a Trystero room ID after matching players with similar ping
+    // For now, use a shared lobby as placeholder until server is deployed
+    // 
+    // Future flow:
+    // 1. Connect to CF Workers matchmaking WebSocket
+    // 2. Server measures ping and finds compatible players
+    // 3. Server returns Trystero room config: { appId, relayUrls, roomId: 'official-lobby-xxx' }
+    // 4. Players connect via Trystero to the assigned lobby
+    await this.joinRoom('official-matchmaking-lobby')
+  }
+
+  public async joinCustomRoom(roomId: string): Promise<void> {
+    console.log('Joining custom room:', roomId)
+    // Custom rooms use direct peer-to-peer via Trystero/Nostr
+    // No server involvement - players share room ID manually
+    await this.joinRoom(`custom-room-${roomId}`)
+  }
+
+  /**
+   * Join an official lobby from matchmaking server response
+   * Called when the CF Workers server assigns a lobby
+   */
+  public async joinOfficialLobby(trysteroConfig: { appId: string; relayUrls: string[]; roomId: string }): Promise<void> {
+    console.log('Joining official lobby:', trysteroConfig.roomId)
     
-    // Join the matchmaking room
+    // Use the server-provided Trystero config
+    this.room = joinRoom(
+      { appId: trysteroConfig.appId, relayUrls: trysteroConfig.relayUrls },
+      trysteroConfig.roomId
+    )
+    
+    await this.setupRoomHandlers()
+    this.initializeLobby()
+  }
+
+  private async joinRoom(roomName: string): Promise<void> {
+    // Join the room
     this.room = joinRoom(
       { appId: APP_ID, relayUrls: [NOSTR_RELAY] },
-      'matchmaking-lobby'
+      roomName
     )
 
+    await this.setupRoomHandlers()
+
+    // Initialize lobby state
+    this.initializeLobby()
+  }
+
+  /**
+   * Set up Trystero room action handlers
+   * Used by both custom rooms and official matchmaking
+   */
+  private async setupRoomHandlers(): Promise<void> {
+    if (!this.room) return
+
     // Set up action handlers (without explicit type parameters due to TypeScript issues)
-    const [sendPosition, getPosition] = this.room!.makeAction('position')
-    const [sendLobbyState, getLobbyState] = this.room!.makeAction('lobbyState')
-    const [sendGameStart, getGameStart] = this.room!.makeAction('gameStart')
-    const [sendShoot, getShoot] = this.room!.makeAction('shoot')
+    const [sendPosition, getPosition] = this.room.makeAction('position')
+    const [sendLobbyState, getLobbyState] = this.room.makeAction('lobbyState')
+    const [sendGameStart, getGameStart] = this.room.makeAction('gameStart')
+    const [sendShoot, getShoot] = this.room.makeAction('shoot')
 
     this.sendPosition = sendPosition
     this.sendLobbyState = sendLobbyState
@@ -131,13 +180,13 @@ export class MultiplayerManager {
     this.sendShoot = sendShoot
 
     // Handle peer join
-    this.room!.onPeerJoin((peerId) => {
+    this.room.onPeerJoin((peerId) => {
       console.log('Peer joined:', peerId)
       this.handlePeerJoin(peerId)
     })
 
     // Handle peer leave
-    this.room!.onPeerLeave((peerId) => {
+    this.room.onPeerLeave((peerId) => {
       console.log('Peer left:', peerId)
       this.handlePeerLeave(peerId)
     })
@@ -169,9 +218,6 @@ export class MultiplayerManager {
         this.handleRemoteShoot(data, peerId)
       }
     })
-
-    // Initialize lobby state
-    this.initializeLobby()
   }
 
   private initializeLobby(): void {

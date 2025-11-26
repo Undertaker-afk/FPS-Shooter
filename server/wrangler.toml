@@ -1,0 +1,31 @@
+name = "enari-fps-matchmaking"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Enable Durable Objects for stateful matchmaking
+[[durable_objects.bindings]]
+name = "MATCHMAKING"
+class_name = "MatchmakingDO"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "LobbyDO"
+
+[[durable_objects.bindings]]
+name = "WORKER_MESH"
+class_name = "WorkerMeshDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["MatchmakingDO", "LobbyDO", "WorkerMeshDO"]
+
+# KV namespace for worker mesh coordination
+[[kv_namespaces]]
+binding = "WORKER_REGISTRY"
+id = "your-kv-namespace-id"
+
+# Environment variables (set these in Cloudflare dashboard)
+[vars]
+WORKER_ID = "worker-1"
+WORKER_REGION = "us-east"
+MESH_SECRET = "change-me-in-production"
