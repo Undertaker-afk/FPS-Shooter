@@ -14,6 +14,7 @@ export class MobileControls {
   private rightJoystickStartX = 0
   private rightJoystickStartY = 0
   private onMouseMoveCallback: ((deltaX: number, deltaY: number) => void) | null = null
+  private onMenuCallback: (() => void) | null = null
 
   // Joystick sensitivity
   private readonly JOYSTICK_RADIUS = 40
@@ -59,6 +60,10 @@ export class MobileControls {
 
   public setMouseMoveCallback(callback: (deltaX: number, deltaY: number) => void): void {
     this.onMouseMoveCallback = callback
+  }
+
+  public setMenuCallback(callback: () => void): void {
+    this.onMenuCallback = callback
   }
 
   private createContainer(): HTMLDivElement {
@@ -115,6 +120,10 @@ export class MobileControls {
   }
 
   private createActionButtons(): void {
+    // Menu button (top left)
+    const menuBtn = this.createMenuButton()
+    this.container.appendChild(menuBtn)
+
     // Jump button
     const jumpBtn = this.createButton('JUMP', 'right', 200, () => {
       this.keys.get(Key.Jump)?.setPressed(true)
@@ -182,6 +191,44 @@ export class MobileControls {
       e.preventDefault()
       button.style.background = 'rgba(255, 255, 255, 0.2)'
       onRelease()
+    })
+    return button
+  }
+
+  private createMenuButton(): HTMLButtonElement {
+    const button = document.createElement('button')
+    button.innerText = '☰'
+    button.style.cssText = `
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 10px;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      pointer-events: auto;
+      touch-action: none;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    `
+    button.addEventListener('touchstart', (e) => {
+      e.preventDefault()
+      button.style.background = 'rgba(255, 255, 255, 0.4)'
+    })
+    button.addEventListener('touchend', (e) => {
+      e.preventDefault()
+      button.style.background = 'rgba(255, 255, 255, 0.2)'
+      if (this.onMenuCallback) {
+        this.onMenuCallback()
+      }
+    })
+    button.addEventListener('touchcancel', (e) => {
+      e.preventDefault()
+      button.style.background = 'rgba(255, 255, 255, 0.2)'
     })
     return button
   }

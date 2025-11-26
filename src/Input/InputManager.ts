@@ -57,6 +57,9 @@ export class InputManager implements IUpdatable {
 
     // Initialize mobile controls
     this.mobileControls = new MobileControls(this.keys)
+    this.mobileControls.setMenuCallback(() => {
+      this.escMenu.toggle()
+    })
 
     // Initialize ESC menu
     this.escMenu = new EscMenu()
