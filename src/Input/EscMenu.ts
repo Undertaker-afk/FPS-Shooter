@@ -1,3 +1,5 @@
+import { MultiplayerManager } from '../Multiplayer/MultiplayerManager'
+
 export class EscMenu {
   private static readonly CONTROLS_MODAL_ID = 'controls-modal'
   private static readonly ESCAPE_KEY = 'Escape'
@@ -5,8 +7,11 @@ export class EscMenu {
   private container: HTMLDivElement
   private isVisible = false
   private onResumeCallback: (() => void) | null = null
+  private onDisconnectCallback: (() => void) | null = null
+  private multiplayerManager: MultiplayerManager
 
   constructor() {
+    this.multiplayerManager = MultiplayerManager.getInstance()
     this.container = this.createContainer()
     document.body.appendChild(this.container)
     this.setupKeyListener()
@@ -14,6 +19,10 @@ export class EscMenu {
 
   public setResumeCallback(callback: () => void): void {
     this.onResumeCallback = callback
+  }
+
+  public setDisconnectCallback(callback: () => void): void {
+    this.onDisconnectCallback = callback
   }
   
   private removeControlsModal(): void {
@@ -76,20 +85,38 @@ export class EscMenu {
     const controlsBtn = this.createMenuButton('CONTROLS', () => this.showControls())
     menuBox.appendChild(controlsBtn)
 
+    // Disconnect button
+    const disconnectBtn = this.createMenuButton('DISCONNECT', () => this.handleDisconnect(), true)
+    menuBox.appendChild(disconnectBtn)
+
     container.appendChild(menuBox)
     return container
   }
 
-  private createMenuButton(label: string, onClick: () => void): HTMLButtonElement {
+  private handleDisconnect(): void {
+    this.multiplayerManager.disconnect()
+    this.hide()
+    if (this.onDisconnectCallback) {
+      this.onDisconnectCallback()
+    }
+    // Reload the page to return to main menu
+    window.location.reload()
+  }
+
+  private createMenuButton(label: string, onClick: () => void, isDanger: boolean = false): HTMLButtonElement {
     const button = document.createElement('button')
     button.innerText = label
+    const baseBackground = isDanger ? 'rgba(233, 69, 96, 0.3)' : 'rgba(255, 255, 255, 0.1)'
+    const baseBorder = isDanger ? 'rgba(233, 69, 96, 0.6)' : 'rgba(255, 255, 255, 0.3)'
+    const hoverBackground = isDanger ? 'rgba(233, 69, 96, 0.5)' : 'rgba(255, 255, 255, 0.2)'
+    const hoverBorder = isDanger ? 'rgba(233, 69, 96, 0.8)' : 'rgba(255, 255, 255, 0.5)'
     button.style.cssText = `
       display: block;
       width: 100%;
       padding: 15px 30px;
       margin: 10px 0;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: ${baseBackground};
+      border: 1px solid ${baseBorder};
       border-radius: 5px;
       color: white;
       font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
@@ -100,12 +127,12 @@ export class EscMenu {
       outline: none;
     `
     button.addEventListener('mouseenter', () => {
-      button.style.background = 'rgba(255, 255, 255, 0.2)'
-      button.style.borderColor = 'rgba(255, 255, 255, 0.5)'
+      button.style.background = hoverBackground
+      button.style.borderColor = hoverBorder
     })
     button.addEventListener('mouseleave', () => {
-      button.style.background = 'rgba(255, 255, 255, 0.1)'
-      button.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+      button.style.background = baseBackground
+      button.style.borderColor = baseBorder
     })
     button.addEventListener('click', onClick)
     return button
