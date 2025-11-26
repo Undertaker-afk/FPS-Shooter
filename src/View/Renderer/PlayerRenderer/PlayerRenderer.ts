@@ -5,7 +5,6 @@ import { Game } from '../../../Game'
 import { IUpdatable } from '../../../Interface/IUpdatable'
 import { HitscanResult } from '../../../Interface/utils'
 import { CameraManager } from '../../CameraManager/CameraManager'
-import { DebugUI } from '../../DebugUI'
 import { LoadableMesh } from '../../Mesh/LoadableMesh'
 
 export abstract class PlayerRenderer implements IUpdatable {
@@ -15,7 +14,7 @@ export abstract class PlayerRenderer implements IUpdatable {
   protected debugCollisionMesh!: THREE.Mesh
   protected player: Player
   protected game: Game
-  protected showDebug = true
+  protected showDebug = false
   protected showDebugHitscan = false
   protected baseFov = 80
 
@@ -41,33 +40,6 @@ export abstract class PlayerRenderer implements IUpdatable {
     this.game = Game.getInstance()
     if (this.showDebug) {
       this.createDebugMeshs()
-      const debugUI = this.game.renderer.debugUI
-      debugUI.addSeparator()
-      const folder = debugUI.playerFolder.addFolder({ title: 'Player position' })
-      //const fov = debugUI.addInput(this, 'baseFov' as any).on('change', () => this.setFov(this.baseFov))
-      const x = debugUI.addMonitor(this.player.position, 'x', {
-        multiline: true,
-        lineCount: 1,
-      })
-      const y = debugUI.addMonitor(this.player.position, 'y', {
-        multiline: true,
-        lineCount: 1,
-      })
-      const z = debugUI.addMonitor(this.player.position, 'z', {
-        multiline: true,
-        lineCount: 1,
-      })
-      const magn = debugUI.addMonitor(this.player, 'currentSpeedMagnitude', {
-        title: 'Player current speed magnitude',
-      })
-      const deceleration = debugUI.addVector(this.player.deceleration, 'Player deceleration', new Vector3D(2, 2, 2))
-      //folder.add(fov)
-      folder.add(x)
-      folder.add(y)
-      folder.add(z)
-      folder.add(magn)
-      folder.add(deceleration)
-      debugUI.addSeparator()
     }
   }
 
@@ -165,8 +137,5 @@ export abstract class PlayerRenderer implements IUpdatable {
   public setFov(fov: number): void {
     ;(<THREE.PerspectiveCamera>this.camera).fov = fov
     console.log((<THREE.PerspectiveCamera>this.camera).fov)
-  }
-  public showVariables() {
-    const debugUI = Game.getInstance().renderer.debugUI
   }
 }

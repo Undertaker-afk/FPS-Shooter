@@ -24,10 +24,6 @@ export class ViewmodelRenderer {
     this.scene.add(this.camera)
   }
 
-  public addDebugUI(renderer: Renderer) {
-    renderer.debugUI.addMesh(this.camera)
-  }
-
   public render(renderer: Renderer, dt: number) {
     renderer.clearDepth()
     renderer.render(this.scene, this.camera)

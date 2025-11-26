@@ -25,7 +25,6 @@ import ParticleSystem, {
   SpriteRenderer,
   Vector3D as NebulaVector3D,
 } from 'three-nebula'
-import { DebugUI } from '../../DebugUI'
 import { LoadableMesh } from '../../Mesh/LoadableMesh'
 import { Player } from '../../../Core/Player'
 import { HitscanResult } from '../../../Interface/utils'
@@ -109,35 +108,6 @@ export class FPSRenderer extends PlayerRenderer implements IUpdatable {
     this.initParticleEmitter()
     this.setMesh(fpsMesh)
     this.setFov(this.baseFov)
-    if (this.showDebug) {
-      const debugUI: DebugUI = this.game.renderer.debugUI
-
-      const positionFolder = debugUI.addVector(this.weaponOffset, 'Viewmodel Offset', new Vector3D(2, 4, 2), 0.01)
-      const rotationFolder = debugUI.addVector(
-        this.weaponRotation,
-        'Viewmodel Rotation',
-        new Vector3D(Math.PI, Math.PI, Math.PI)
-      )
-      const bobbingAmount = debugUI.addInput(this, 'bobbingAmount' as any, {
-        min: 0.0001,
-        max: 0.01,
-      })
-
-      const bobbingRestitution = debugUI.addInput(this, 'bobbingRestitutionSpeed' as any, {
-        min: 0.1,
-        max: 100,
-      })
-
-      debugUI.viewmodelFolder.add(positionFolder)
-      debugUI.viewmodelFolder.add(rotationFolder)
-      debugUI.viewmodelFolder.add(bobbingAmount)
-      debugUI.viewmodelFolder.add(bobbingRestitution)
-
-      const pointLightMesh = debugUI.addMesh(this.playerLight, 'Player PointLight')
-      const pointLightColor = debugUI.addObject(this.playerLight.color, 'Player PointLight Color')
-      debugUI.playerFolder.add(pointLightMesh)
-      debugUI.playerFolder.add(pointLightColor)
-    }
   }
 
   public setMesh(mesh: LoadableMesh): void {

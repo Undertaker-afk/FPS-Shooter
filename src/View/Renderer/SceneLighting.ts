@@ -16,16 +16,6 @@ export class SceneLighting implements IUpdatable {
   constructor(renderer: Renderer) {
     this.renderer = renderer
     this.renderer.toneMapping = THREE.NoToneMapping
-    this.renderer.debugUI.addInput(this.renderer, 'toneMapping', {
-      view: 'list',
-      label: 'ToneMapping',
-      options: [
-        { text: 'None', value: THREE.NoToneMapping },
-        { text: 'Linear', value: THREE.LinearToneMapping },
-        { text: 'Reinhard', value: THREE.ReinhardToneMapping },
-        { text: 'Cineon', value: THREE.CineonToneMapping },
-      ],
-    })
     this.renderer.toneMappingExposure = 1.1
     this.renderer.setClearColor(0xcccccc)
     this.shadowUpdater = new PeriodicUpdater(
@@ -38,17 +28,6 @@ export class SceneLighting implements IUpdatable {
     this.enableShadow(this.renderer.renderingConfig.hasShadow)
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
-    this.renderer.debugUI.addInput(this.renderer, 'outputColorSpace', {
-      view: 'list',
-      label: 'Encoding',
-      options: [
-        { text: 'LinearEncoding', value: THREE.LinearSRGBColorSpace },
-        { text: 'BasicDepthPacking', value: THREE.BasicDepthPacking },
-        { text: 'RGBADepthPacking', value: THREE.RGBADepthPacking },
-      ],
-      value: THREE.SRGBColorSpace,
-    })
-    this.renderer.debugUI.addInput(this.renderer, 'toneMappingExposure')
     this.sky = new SkyLight(renderer)
     this.applyRenderingConfig()
     for (let i = 0; i < 1; i++) {
