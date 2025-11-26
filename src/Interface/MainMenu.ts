@@ -613,6 +613,10 @@ export class MainMenu {
     return dialog
   }
 
+  /**
+   * Generate a random room ID for custom rooms
+   * Character set excludes I, L, O, 0, 1 to avoid confusion when sharing codes
+   */
   private generateRoomId(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let result = ''

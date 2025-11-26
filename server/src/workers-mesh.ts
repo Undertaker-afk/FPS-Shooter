@@ -1,44 +1,31 @@
 /**
- * Worker-to-worker communication via Trystero for load balancing
+ * Worker-to-worker communication for load balancing
  * Enables multiple CF Workers to coordinate and balance game server loads
- * Uses the same Trystero infrastructure as the game client for consistency
+ * 
+ * Note: CF Workers cannot use Trystero directly (no WebRTC support).
+ * Workers communicate via HTTP/fetch. Players receive Trystero room configs
+ * from the matchmaking server and connect peer-to-peer via Trystero client-side.
  */
 
 import type { WorkerInfo, WorkerLoad, MeshMessage, Env } from './types'
 
-// Trystero configuration - same relay as game client
+// Trystero configuration - provided to clients for peer-to-peer connections
 const NOSTR_RELAY = 'wss://nos.lol'
-const APP_ID = 'enari-fps-worker-mesh-v1'
+const APP_ID = 'enari-fps-shooter-v1'
 
 // Constants
-const HEARTBEAT_INTERVAL = 30000 // 30 seconds
 const WORKER_TIMEOUT = 90000 // 90 seconds before considering worker offline
 
-// Type for Trystero room (simplified for CF Workers environment)
-interface TrysteroRoom {
-  makeAction: (name: string) => [
-    (data: unknown, targetPeers?: string[]) => void,
-    (callback: (data: unknown, peerId: string) => void) => void
-  ]
-  onPeerJoin: (callback: (peerId: string) => void) => void
-  onPeerLeave: (callback: (peerId: string) => void) => void
-  leave: () => void
-  getPeers: () => string[]
-}
-
 /**
- * WorkerMesh Durable Object for coordinating between workers via Trystero
+ * WorkerMesh Durable Object for coordinating between workers
+ * Workers communicate via HTTP, not WebRTC/Trystero
  */
 export class WorkerMeshDO {
   private state: DurableObjectState
   private env: Env
   private workers: Map<string, WorkerInfo> = new Map()
   private localWorkerId: string
-  private room: TrysteroRoom | null = null
-  private sendWorkerInfo: ((data: unknown, targetPeers?: string[]) => void) | null = null
-  private sendLoadUpdate: ((data: unknown, targetPeers?: string[]) => void) | null = null
-  private sendTransfer: ((data: unknown, targetPeers?: string[]) => void) | null = null
-  private sendBalance: ((data: unknown, targetPeers?: string[]) => void) | null = null
+  private initialized: boolean = false
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state
@@ -55,13 +42,12 @@ export class WorkerMeshDO {
   }
 
   /**
-   * Initialize Trystero connection for worker mesh
-   * Note: In CF Workers, we use a WebSocket-based approach compatible with Trystero protocol
+   * Initialize this worker in the mesh
    */
-  private async initializeTrysteroMesh(): Promise<void> {
-    // In CF Workers environment, we simulate Trystero behavior
-    // The actual implementation uses WebSocket connections to Nostr relays
-    console.log(`Worker ${this.localWorkerId} joining mesh via Trystero...`)
+  private async initializeWorker(): Promise<void> {
+    if (this.initialized) return
+    
+    console.log(`Worker ${this.localWorkerId} initializing in mesh...`)
     
     // Store local worker info
     const localWorker: WorkerInfo = {
@@ -75,10 +61,11 @@ export class WorkerMeshDO {
     
     this.workers.set(this.localWorkerId, localWorker)
     await this.state.storage.put('workers', this.workers)
+    this.initialized = true
   }
 
   /**
-   * Generate a public key for this worker (for encrypted mesh communication)
+   * Generate a public key for this worker (for signed communication)
    */
   private async generatePublicKey(): Promise<string> {
     const keyData = new TextEncoder().encode(this.env.MESH_SECRET + this.localWorkerId)
@@ -94,9 +81,9 @@ export class WorkerMeshDO {
     const url = new URL(request.url)
     const path = url.pathname
 
-    // Initialize mesh if not already done
-    if (!this.room) {
-      await this.initializeTrysteroMesh()
+    // Initialize worker if not already done
+    if (!this.initialized) {
+      await this.initializeWorker()
     }
 
     switch (path) {
@@ -110,17 +97,17 @@ export class WorkerMeshDO {
         return this.handleMessage(request)
       case '/best-worker':
         return this.handleGetBestWorker(request)
-      case '/trystero-sync':
-        return this.handleTrysteroSync(request)
+      case '/sync':
+        return this.handleSync(request)
       default:
         return new Response('Not found', { status: 404 })
     }
   }
 
   /**
-   * Handle Trystero-style sync message from another worker
+   * Handle sync message from another worker
    */
-  private async handleTrysteroSync(request: Request): Promise<Response> {
+  private async handleSync(request: Request): Promise<Response> {
     const { type, fromWorkerId, data, signature } = await request.json() as {
       type: string
       fromWorkerId: string
@@ -183,8 +170,6 @@ export class WorkerMeshDO {
    */
   private async handleTransferSync(data: { playerId: string; lobbyId: string }): Promise<Response> {
     console.log(`Transfer sync: player ${data.playerId} to lobby ${data.lobbyId}`)
-    // Implement actual transfer logic here
-
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
     })
@@ -195,8 +180,6 @@ export class WorkerMeshDO {
    */
   private async handleBalanceSync(data: { targetLoad: number }): Promise<Response> {
     console.log(`Balance sync: target load ${data.targetLoad}`)
-    // Implement actual balance logic here
-
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
     })
@@ -217,13 +200,12 @@ export class WorkerMeshDO {
     this.workers.set(workerInfo.id, workerInfo)
     await this.state.storage.put('workers', this.workers)
 
-    // Broadcast to other workers via Trystero-style sync
+    // Broadcast to other workers
     await this.broadcastToMesh('worker-info', workerInfo)
 
     return new Response(JSON.stringify({ 
       success: true, 
-      workers: Array.from(this.workers.values()),
-      meshProtocol: 'trystero-nostr'
+      workers: Array.from(this.workers.values())
     }), {
       headers: { 'Content-Type': 'application/json' }
     })
@@ -271,7 +253,7 @@ export class WorkerMeshDO {
   }
 
   /**
-   * Handle encrypted message between workers (legacy support)
+   * Handle encrypted message between workers
    */
   private async handleMessage(request: Request): Promise<Response> {
     const message = await request.json() as MeshMessage
@@ -284,16 +266,9 @@ export class WorkerMeshDO {
     // Process message based on type
     switch (message.type) {
       case 'sync':
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { 'Content-Type': 'application/json' }
-        })
       case 'transfer':
-        console.log(`Transfer request from ${message.fromWorkerId}`)
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { 'Content-Type': 'application/json' }
-        })
       case 'balance':
-        console.log(`Balance request from ${message.fromWorkerId}`)
+        console.log(`${message.type} request from ${message.fromWorkerId}`)
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json' }
         })
@@ -315,8 +290,7 @@ export class WorkerMeshDO {
     
     if (activeWorkers.length === 0) {
       return new Response(JSON.stringify({ 
-        workerId: this.localWorkerId,
-        meshProtocol: 'trystero-nostr'
+        workerId: this.localWorkerId
       }), {
         headers: { 'Content-Type': 'application/json' }
       })
@@ -346,15 +320,14 @@ export class WorkerMeshDO {
 
     return new Response(JSON.stringify({ 
       workerId: scoredWorkers[0].worker.id,
-      endpoint: scoredWorkers[0].worker.endpoint,
-      meshProtocol: 'trystero-nostr'
+      endpoint: scoredWorkers[0].worker.endpoint
     }), {
       headers: { 'Content-Type': 'application/json' }
     })
   }
 
   /**
-   * Broadcast a message to all workers in the mesh via Trystero-style protocol
+   * Broadcast a message to all workers in the mesh via HTTP
    */
   private async broadcastToMesh(type: string, data: unknown): Promise<void> {
     const signature = await this.createSignature(JSON.stringify(data), this.localWorkerId)
@@ -366,11 +339,11 @@ export class WorkerMeshDO {
       signature
     }
 
-    // Send to all known workers
+    // Send to all known workers via HTTP
     for (const [id, worker] of this.workers) {
       if (id !== this.localWorkerId) {
         try {
-          await fetch(`${worker.endpoint}/mesh/trystero-sync`, {
+          await fetch(`${worker.endpoint}/mesh/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(message)
@@ -423,21 +396,23 @@ export class WorkerMeshDO {
 
 /**
  * Get the current worker's load information
+ * TODO: In production, implement actual metric collection using CF Workers analytics
  */
 export function getLocalWorkerLoad(activePlayers: number, activeLobbies: number): WorkerLoad {
   return {
     activePlayers,
     activeLobbies,
-    // These would be actual metrics in production
-    cpuUsage: Math.random() * 50, // Simulated
-    memoryUsage: Math.random() * 60 // Simulated
+    // TODO: Replace with actual metrics in production
+    // CF Workers don't expose CPU/memory metrics directly
+    cpuUsage: 0,
+    memoryUsage: 0
   }
 }
 
 /**
  * Select the best worker for a player based on their region
  */
-export async function selectBestWorker(env: Env, playerRegion: string): Promise<{ workerId: string; endpoint?: string; meshProtocol?: string }> {
+export async function selectBestWorker(env: Env, playerRegion: string): Promise<{ workerId: string; endpoint?: string }> {
   const meshId = env.WORKER_MESH.idFromName('global-mesh')
   const meshStub = env.WORKER_MESH.get(meshId)
 
@@ -451,13 +426,13 @@ export async function selectBestWorker(env: Env, playerRegion: string): Promise<
 }
 
 /**
- * Trystero room configuration for workers
- * This provides the room ID and relay configuration for worker mesh
+ * Get Trystero room configuration for clients
+ * This is provided to players after matchmaking so they can connect peer-to-peer
  */
-export function getWorkerMeshConfig(workerId: string): { appId: string; relayUrls: string[]; roomId: string } {
+export function getTrysteroConfigForLobby(lobbyId: string): { appId: string; relayUrls: string[]; roomId: string } {
   return {
     appId: APP_ID,
     relayUrls: [NOSTR_RELAY],
-    roomId: `worker-mesh-${workerId}`
+    roomId: `official-lobby-${lobbyId}`
   }
 }

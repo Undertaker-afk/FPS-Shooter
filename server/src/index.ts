@@ -6,8 +6,10 @@
  * - Ping-based matchmaking to group players with similar latency
  * - Network packet validation for anti-cheat
  * - Web UI for load management and statistics
- * - Worker mesh for distributed load balancing via Trystero
- * - Player connections via Trystero (same as game client)
+ * - Worker mesh for distributed load balancing
+ * 
+ * Note: CF Workers handle matchmaking coordination.
+ * Players connect peer-to-peer via Trystero after receiving room config from server.
  */
 
 import type { 
@@ -28,12 +30,12 @@ import {
 } from './ping'
 import { validatePacket, clearValidationState, getViolationSummary } from './validation'
 import { generateDashboardHTML, generateStatsJSON, collectServerStats } from './webui'
-import { WorkerMeshDO, getLocalWorkerLoad, selectBestWorker, getWorkerMeshConfig } from './workers-mesh'
+import { WorkerMeshDO, getLocalWorkerLoad, selectBestWorker, getTrysteroConfigForLobby } from './workers-mesh'
 
 // Re-export Durable Objects
 export { WorkerMeshDO }
 
-// Trystero configuration - same as game client for consistency
+// Trystero configuration - provided to clients for peer-to-peer connections
 const NOSTR_RELAY = 'wss://nos.lol'
 const APP_ID = 'enari-fps-shooter-v1'
 
