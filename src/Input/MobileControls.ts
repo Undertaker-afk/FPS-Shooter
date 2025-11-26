@@ -42,8 +42,11 @@ export class MobileControls {
   }
 
   private checkMobile(): void {
-    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-    this.container.style.display = isMobile ? 'block' : 'none'
+    // Check if device is primarily touch-based (excludes laptops with touchscreens that also have mice)
+    const isTouchPrimary = window.matchMedia('(pointer: coarse)').matches
+    const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+    // Show mobile controls if touch is the primary input method
+    this.container.style.display = isTouchPrimary && hasTouchScreen ? 'block' : 'none'
   }
 
   public show(): void {

@@ -1,4 +1,7 @@
 export class EscMenu {
+  private static readonly CONTROLS_MODAL_ID = 'controls-modal'
+  private static readonly ESCAPE_KEY = 'Escape'
+  
   private container: HTMLDivElement
   private isVisible = false
   private onResumeCallback: (() => void) | null = null
@@ -11,6 +14,13 @@ export class EscMenu {
 
   public setResumeCallback(callback: () => void): void {
     this.onResumeCallback = callback
+  }
+  
+  private removeControlsModal(): void {
+    const modal = document.getElementById(EscMenu.CONTROLS_MODAL_ID)
+    if (modal) {
+      modal.remove()
+    }
   }
 
   private createContainer(): HTMLDivElement {
@@ -102,13 +112,10 @@ export class EscMenu {
   }
 
   private showControls(): void {
-    const existingModal = document.getElementById('controls-modal')
-    if (existingModal) {
-      existingModal.remove()
-    }
+    this.removeControlsModal()
 
     const modal = document.createElement('div')
-    modal.id = 'controls-modal'
+    modal.id = EscMenu.CONTROLS_MODAL_ID
     modal.style.cssText = `
       position: fixed;
       top: 0;
@@ -199,7 +206,7 @@ export class EscMenu {
 
   private setupKeyListener(): void {
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === EscMenu.ESCAPE_KEY) {
         this.toggle()
       }
     })
@@ -214,11 +221,7 @@ export class EscMenu {
   public hide(): void {
     this.isVisible = false
     this.container.style.display = 'none'
-    // Close any open modals
-    const controlsModal = document.getElementById('controls-modal')
-    if (controlsModal) {
-      controlsModal.remove()
-    }
+    this.removeControlsModal()
     if (this.onResumeCallback) {
       this.onResumeCallback()
     }
